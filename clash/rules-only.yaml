@@ -1,0 +1,39 @@
+# 仅规则块：把 rules: 下面的条目整体追加到你现有 Clash/mihomo 配置的 rules: 里
+# 要求：
+#   1. 必须放在 MATCH,xxx 之前
+#   2. 不要改动原有节点、策略组、其他规则
+#   3. 追加后重新加载配置
+
+rules:
+  # ── 穿山甲 / Pangle SDK 配置入口 ──────────────────────────────
+  - DOMAIN-SUFFIX,pangolin-sdk-toutiao.com,REJECT
+  - DOMAIN-SUFFIX,pangolin-sdk-toutiao1.com,REJECT
+  - DOMAIN-SUFFIX,pangolin-sdk-toutiao-b.com,REJECT
+  - DOMAIN-SUFFIX,pangolin16s-sdk-toutiao.com,REJECT
+  - DOMAIN-SUFFIX,pglstatp-toutiao.com,REJECT
+  - DOMAIN-SUFFIX,pglstatp-toutiao-b.com,REJECT
+  - DOMAIN-SUFFIX,pangle.io,REJECT
+  - DOMAIN-SUFFIX,pangle.cn,REJECT
+
+  # ── 广告素材签名（字节 CDN）──────────────────────────────────
+  - DOMAIN-KEYWORD,-ad-sign.byteimg.com,REJECT
+  - DOMAIN-KEYWORD,-ad-sign.bytemaimg.com,REJECT
+  - DOMAIN-KEYWORD,-developer-sign.bytemaimg.com,REJECT
+
+  # ── 广告位 / 电商 / 小游戏接口 ────────────────────────────────
+  - DOMAIN-REGEX,^ads[0-9]*-normal(-[a-z0-9]+)?\.zijieapi\.com$,REJECT
+  - DOMAIN-REGEX,^minigame[0-9]*-normal(-[a-z0-9]+)?\.zijieapi\.com$,REJECT
+  - DOMAIN-REGEX,^(ecom[0-9]*-normal|ec[0-9]*-core|isaas[0-9]*-normal)-lq\.ecombdapi\.com$,REJECT
+
+  # ── 红果阅读页视频广告 ───────────────────────────────────────
+  - DOMAIN-REGEX,^v[0-9]+-(?:(?:bd|se|se-sjy)-daily-)?reading-ad\.qznovelvod\.com$,REJECT
+
+  # ── 激励面板 / 落地页 ────────────────────────────────────────
+  - DOMAIN,praisewindow.ugsdk.cn,REJECT
+  - DOMAIN,praisewindow-sinfonlinea.ugsdk.cn,REJECT
+  - DOMAIN,zlink.ugsdk.cn,REJECT
+  - DOMAIN,www.chengzijianzhan.com,REJECT
+
+  # ── 巨量引擎曝光上报 ─────────────────────────────────────────
+  - DOMAIN-SUFFIX,ad.oceanengine.com,REJECT
+  - DOMAIN-SUFFIX,adlog.oceanengine.com,REJECT

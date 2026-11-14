@@ -1,0 +1,79 @@
+# 纯去广告配置：全部直连，不使用任何机场节点，不消耗机场流量
+# 适用：Clash Meta for Android (CMFA) / mihomo
+# 说明：本文件不含任何代理节点凭据，可安全公开
+
+mixed-port: 7890
+allow-lan: false
+mode: rule
+log-level: info
+ipv6: false
+
+dns:
+  enable: true
+  ipv6: false
+  enhanced-mode: fake-ip
+  fake-ip-range: 198.18.0.1/16
+  nameserver:
+    - 223.5.5.5
+    - 119.29.29.29
+  fallback:
+    - 1.1.1.1
+    - 8.8.8.8
+
+# 从 TLS SNI / HTTP Host 还原域名：
+# 即使 App 直接连 IP，也能命中下面的域名规则
+sniffer:
+  enable: true
+  parse-pure-ip: true
+  override-destination: false
+
+# CMFA 新建配置时，proxies / proxy-groups 全空可能导致保存不生效。
+# 这里放一个「从不被任何规则或策略组引用」的占位代理，仅为通过校验。
+proxies:
+  - name: placeholder-unused
+    type: socks5
+    server: 127.0.0.1
+    port: 1080
+
+proxy-groups:
+  - name: 直连
+    type: select
+    proxies:
+      - DIRECT
+
+rules:
+  # ── 穿山甲 / Pangle SDK 配置入口 ──────────────────────────────
+  - DOMAIN-SUFFIX,pangolin-sdk-toutiao.com,REJECT
+  - DOMAIN-SUFFIX,pangolin-sdk-toutiao1.com,REJECT
+  - DOMAIN-SUFFIX,pangolin-sdk-toutiao-b.com,REJECT
+  - DOMAIN-SUFFIX,pangolin16s-sdk-toutiao.com,REJECT
+  - DOMAIN-SUFFIX,pglstatp-toutiao.com,REJECT
+  - DOMAIN-SUFFIX,pglstatp-toutiao-b.com,REJECT
+  - DOMAIN-SUFFIX,pangle.io,REJECT
+  - DOMAIN-SUFFIX,pangle.cn,REJECT
+
+  # ── 广告素材签名（字节 CDN）──────────────────────────────────
+  - DOMAIN-KEYWORD,-ad-sign.byteimg.com,REJECT
+  - DOMAIN-KEYWORD,-ad-sign.bytemaimg.com,REJECT
+  - DOMAIN-KEYWORD,-developer-sign.bytemaimg.com,REJECT
+
+  # ── 广告位 / 电商 / 小游戏接口 ────────────────────────────────
+  - DOMAIN-REGEX,^ads[0-9]*-normal(-[a-z0-9]+)?\.zijieapi\.com$,REJECT
+  - DOMAIN-REGEX,^minigame[0-9]*-normal(-[a-z0-9]+)?\.zijieapi\.com$,REJECT
+  - DOMAIN-REGEX,^(ecom[0-9]*-normal|ec[0-9]*-core|isaas[0-9]*-normal)-lq\.ecombdapi\.com$,REJECT
+
+  # ── 红果阅读页视频广告 ───────────────────────────────────────
+  - DOMAIN-REGEX,^v[0-9]+-(?:(?:bd|se|se-sjy)-daily-)?reading-ad\.qznovelvod\.com$,REJECT
+
+  # ── 激励面板 / 落地页 ────────────────────────────────────────
+  - DOMAIN,praisewindow.ugsdk.cn,REJECT
+  - DOMAIN,praisewindow-sinfonlinea.ugsdk.cn,REJECT
+  - DOMAIN,zlink.ugsdk.cn,REJECT
+  - DOMAIN,www.chengzijianzhan.com,REJECT
+
+  # ── 巨量引擎曝光上报 ─────────────────────────────────────────
+  - DOMAIN-SUFFIX,ad.oceanengine.com,REJECT
+  - DOMAIN-SUFFIX,adlog.oceanengine.com,REJECT
+
+  # 其余全部直连
+  - MATCH,DIRECT

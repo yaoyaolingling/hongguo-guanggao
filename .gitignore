@@ -1,0 +1,13 @@
+# 任何包含节点/订阅凭据的文件都不要提交
+*clash-export*
+cmfa-export*
+配置文件.txt
+*subscription*.yaml
+
+# 本地临时文件
+*.log
+*.tmp
+__pycache__/
+*.pyc
+.DS_Store
+Thumbs.db
