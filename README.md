@@ -107,7 +107,10 @@ hongguo-guanggao/
 │   ├── 02-clash-setup.md         # Clash 部署步骤
 │   ├── 03-gkd-setup.md           # GKD 部署步骤
 │   ├── 04-verify.md              # 验证命令与排错
-│   └── 05-rule-syntax.md         # GKD 订阅/选择器字段速查
+│   ├── 05-rule-syntax.md         # GKD 订阅/选择器字段速查
+│   └── 06-agent-setup.md         # 用 AI Agent 自动配置
+├── prompts/
+│   └── agent-setup.md            # 可直接粘贴的提示词
 ├── tools/
 │   ├── build_global_sub.py       # 从 AIsouler 订阅提取全局开屏组
 │   ├── serve.sh                  # 本地订阅服务器 + adb reverse
@@ -150,6 +153,36 @@ hongguo-guanggao/
 
 > 仓库若为私有，raw 链接不可用，请改用本地文件方式（`tools/serve.sh` 或 GKD 的本地导入）。
 
+### 4.4 让 AI Agent 帮你配置（推荐）
+
+手机用 USB 连电脑，确认 `adb devices` 能看到设备，然后把下面这段发给能执行 shell 的 Agent（Codex / Claude Code / Cursor）：
+
+```text
+你是 Android 自动化助手。我的手机已通过 USB 连接电脑，adb 可用。
+目标：按 https://github.com/yaoyaolingling/hongguo-guanggao 把「红果短剧去广告」
+配置到我的手机上。
+
+请自行完成：
+1. 读取仓库 README、docs/02-clash-setup.md、docs/03-gkd-setup.md、docs/04-verify.md；
+2. 检查 adb 设备、系统版本、屏幕分辨率；
+3. 导入并激活 clash/adblock-direct.yaml；
+4. 安装 GKD，开启无障碍；
+5. 添加并启用 gkd/hongguo-sub.json 与 gkd/gkd-global-splash.json；
+6. 按 docs/04-verify.md 验证，并汇报真实输出。
+
+硬性要求：
+- 每次点击前先 uiautomator dump 当前界面，按 text/content-desc 定位坐标；
+  禁止凭记忆写死坐标（不同机型/分辨率不同）。
+- 不删除、不覆盖我已有的 Clash 配置与 GKD 订阅。
+- 不执行 am force-stop li.songe.gkd，不清理 GKD 应用数据。
+- 不读取、不上传任何含节点/订阅凭据的文件（如 *clash-export*、配置文件.txt）。
+- 系统弹窗（安装未知应用、无障碍授权）可以点「允许」。
+- 输出必须包含真实命令输出；未执行的步骤写「未执行」，禁止编造结果。
+- 失败时给出当前界面的关键节点、失败原因和下一步建议，不要静默跳过。
+```
+
+Agent 会自己 dump 界面、按文本定位、点按并验证。完整的执行流程、UI 自动化配方（dump/解析/点击/截图）和真机踩坑见 [`docs/06-agent-setup.md`](docs/06-agent-setup.md)，提示词单独存放在 [`prompts/agent-setup.md`](prompts/agent-setup.md)。
+
 ---
 
 ## 5. 验证
@@ -176,8 +209,8 @@ adb shell ps -A | grep li.songe.gkd
 1. **GKD 首页显示「无障碍发生故障」**
    部分 ColorOS/Android 16 机型上，GKD 的 UI 进程重启后收不到服务重连回调，状态文案会误报；但系统侧 `dumpsys accessibility` 仍显示 `Bound services = GKD`，规则照常执行。若规则真的失效，按 `docs/04-verify.md` 的「无障碍掉线」步骤重开一次。
 
-2. **ColorOS 会限制侧载应用的无障碍**
-   通过 `adb install` 安装的 APK 可能无法正常使用无障碍。解决：把 APK 放进手机存储，用**系统文件管理器**点开安装（覆盖安装即可，无需卸载）。
+2. **ColorOS 对侧载应用的无障碍限制**
+   部分 ColorOS/realme UI 版本对 `adb install` 安装的应用有额外限制，表现为开关能开但服务不工作。可把 APK 放进手机存储，用**系统文件管理器**点开覆盖安装（无需卸载）再试。本机实测该操作能正常完成，但 GKD 的状态文案仍可能误报，最终以 `dumpsys accessibility` 为准。
 
 3. **CMFA 新建配置时保存无反应**
    实测 `proxies` / `proxy-groups` 全空、或配置名与已有项重复时，点保存可能不生效。本仓库的配置已加入一个从不被引用的占位代理并改了名，可直接导入。
