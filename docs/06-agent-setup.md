@@ -42,9 +42,21 @@ ADB="$LOCALAPPDATA/Android/Sdk/platform-tools/adb.exe"
 配置到我的手机上。
 
 请自行完成：
-1. 读取仓库 README、docs/02-clash-setup.md、docs/03-gkd-setup.md、docs/04-verify.md；
-2. 检查 adb 设备、系统版本、屏幕分辨率；
-3. 导入并激活 clash/adblock-direct.yaml；
+1. 读取仓库 README、docs/02-clash-setup.md、docs/03-gkd-setup.md、
+   docs/04-verify.md、docs/06-agent-setup.md；
+2. 检查 adb 设备、系统版本、CPU 架构、屏幕分辨率；
+3. 安装并配置 Clash 客户端：
+   a. 先查是否已安装 com.github.metacubex.clash.meta（Clash Meta for Android，
+      即 Android 端的 mihomo 客户端；桌面版 Clash Verge 不能替代手机端）；
+   b. 未安装时，从 https://github.com/MetaCubeX/ClashMetaForAndroid/releases
+      下载与 ro.product.cpu.abi 匹配的 APK，优先 adb install -r；
+      失败则 push 到 /sdcard/Download/ 用系统文件管理器安装；
+   c. 下载 clash/adblock-direct.yaml 并 push 到 /sdcard/Download/；
+   d. 打开客户端 →「配置」→ 右上 + →「从文件导入」→ 选该 yaml → 保存；
+      若文件选择器只有「近期」，改用「从 URL 导入」+
+      adb reverse tcp:8000 tcp:8000 + 本地 http.server；
+   e. 点配置左侧圆点激活 → 返回首页「点此启动」；
+   f. 验证 dumpsys connectivity 中 VPN 计数为 1；
 4. 安装 GKD，开启无障碍；
 5. 添加并启用 gkd/hongguo-sub.json 与 gkd/gkd-global-splash.json；
 6. 按 docs/04-verify.md 验证，并汇报真实输出。
@@ -52,6 +64,7 @@ ADB="$LOCALAPPDATA/Android/Sdk/platform-tools/adb.exe"
 硬性要求：
 - 每次点击前先 uiautomator dump 当前界面，按 text/content-desc 定位坐标；
   禁止凭记忆写死坐标（不同机型/分辨率不同）。
+- 安装 APK 只用官方 release；不装来源不明的包，不改电脑的网络设置。
 - 不删除、不覆盖我已有的 Clash 配置与 GKD 订阅。
 - 不执行 am force-stop li.songe.gkd，不清理 GKD 应用数据。
 - 不读取、不上传任何含节点/订阅凭据的文件（如 *clash-export*、配置文件.txt）。
@@ -80,7 +93,36 @@ adb shell getprop ro.build.version.sdk
 adb shell pm list packages | grep -E "metacubex|songe"
 ```
 
-### 3.2 部署 Clash
+### 3.2 安装 Clash 客户端（未安装时）
+
+> 平台说明：Clash Verge / Clash Verge Rev 是**桌面端**（Windows/macOS/Linux）；
+> Android 端对应 Clash Meta for Android（CMFA，包名
+> `com.github.metacubex.clash.meta`）或 FlClash。两者内核同为 mihomo，
+> 本仓库 YAML 通用，但**手机上的拦截必须由手机上的 VPN 客户端执行**，
+> 桌面版无法替代。
+
+```bash
+# 1. 查是否已安装
+adb shell pm list packages | grep -E "metacubex|flclash|clash"
+
+# 2. 查 CPU 架构，决定下哪个 APK
+adb shell getprop ro.product.cpu.abi
+
+# 3. 取最新版 CMFA 的 arm64 APK 地址（按实际输出下载）
+curl -s https://api.github.com/repos/MetaCubeX/ClashMetaForAndroid/releases/latest \
+  | grep -o 'https://[^"]*arm64-v8a[^"]*\.apk' | head -1
+
+# 4. 安装（已安装可跳过）
+adb install -r ClashMetaForAndroid-*-arm64-v8a-release.apk
+```
+
+安装失败时：
+
+1. 确认手机已开启「USB 安装」；
+2. `adb push` 到 `/sdcard/Download/`，用系统文件管理器点击安装；
+3. 提示签名冲突时，说明已装的是其他渠道版本，先确认无需保留旧配置再卸载重装。
+
+### 3.3 导入并激活配置
 
 ```bash
 # 1. 取配置（或从本仓库 clone 后取 clash/adblock-direct.yaml）
@@ -95,12 +137,26 @@ adb shell monkey -p com.github.metacubex.clash.meta \
   -c android.intent.category.LAUNCHER 1
 ```
 
-随后全部走 UI 自动化：
+随后全部走 UI 自动化（每次点击前先 dump 定位）：
 
 ```text
 首页「配置」→ 右上 + →「从文件导入」→ 选择 adblock-direct.yaml
 → 保存 → 点配置左侧圆点激活 → 返回首页 →「点此启动」
 ```
+
+两个已知坑：
+
+- **文件选择器只显示「近期」**：找不到 Download 里的文件时，改走「从 URL 导入」，
+  并用本地服务器 + adb reverse：
+
+  ```bash
+  adb reverse tcp:8000 tcp:8000
+  python -m http.server 8000 --bind 127.0.0.1
+  # 客户端里填 http://127.0.0.1:8000/clash/adblock-direct.yaml
+  ```
+
+- **点保存没反应**：配置名与已有项重复，或 `proxies` 全空。改名，或直接用仓库自带
+  配置（已放占位代理，不会被引用）。
 
 验证：
 
@@ -109,7 +165,7 @@ adb shell dumpsys connectivity | grep -c "VPN:com.github.metacubex.clash.meta"
 # 期望输出 1
 ```
 
-### 3.3 部署 GKD
+### 3.4 部署 GKD
 
 ```bash
 adb push gkd.apk /sdcard/Download/gkd.apk
@@ -136,7 +192,7 @@ GKD 首页「无障碍未授权」→「开启无障碍」→「前往」
 adb shell am start -a android.settings.ACCESSIBILITY_SETTINGS
 ```
 
-### 3.4 添加订阅
+### 3.5 添加订阅
 
 ```text
 GKD → 底部「订阅」→ 右下 +
@@ -147,7 +203,7 @@ GKD → 底部「订阅」→ 右下 +
 
 进入订阅，确认「开屏广告」「开屏广告-全局」开关为蓝色。
 
-### 3.5 验证
+### 3.6 验证
 
 ```bash
 bash tools/verify.sh
@@ -221,6 +277,8 @@ python -c "from PIL import Image;im=Image.open('shot.png');w,h=im.size;s=900/max
 ## 6. 验收清单
 
 - [ ] `adb devices` 显示设备为 `device`
+- [ ] Clash 客户端已安装（`pm list packages` 能查到 `com.github.metacubex.clash.meta`）
+- [ ] `adblock-direct.yaml` 已导入配置列表并处于激活状态
 - [ ] `dumpsys connectivity` 里 VPN 计数为 1
 - [ ] CMFA 首页显示 `运行中 / 规则模式 / adblock-direct 已激活`
 - [ ] `dumpsys accessibility` 的 `Bound services` 含 `label=GKD`
